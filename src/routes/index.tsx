@@ -74,7 +74,7 @@ function App() {
           <p className="text-lg text-gray-400 max-w-3xl mx-auto mb-8">
             Full-stack framework powered by TanStack Router for React and Solid.
             Build modern applications with server functions, streaming, and type
-            safety.
+            safety. and this is a deploy test 
           </p>
           <div className="flex flex-col items-center gap-4">
             <a
