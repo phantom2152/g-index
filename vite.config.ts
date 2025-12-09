@@ -19,7 +19,7 @@ const config = defineConfig({
     viteReact(),
   ],
   server:{
-    allowedHosts: ["disclaimers-reviewing-property-texture.trycloudflare.com"]
+    allowedHosts: ["key-passing-retail-independently.trycloudflare.com"]
   }
 })
 

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/react-start' // This will work after npm install
-import { getDriveClient } from '../lib/google-drive' // Using ~ alias is safer
+import { createServerFn } from '@tanstack/react-start' 
+import { getDriveClient } from '../lib/google-drive' 
+import { createToken } from '../lib/token'
 import {
   Table,
   TableBody,
@@ -19,7 +20,7 @@ const getFiles = createServerFn({ method: 'GET' })
   .handler(async ({ data, context }: { data: { folderId: string }, context: any }) => {
     const env = context.env || process.env
     
-    if (!env) {
+    if (!env || !env.SECRET_KEY) {
       console.error("Missing Env", env)
       throw new Error("Server Error: Missing Environment Variables")
     }
@@ -27,7 +28,18 @@ const getFiles = createServerFn({ method: 'GET' })
     try {
       const drive = await getDriveClient(env, 'root') // Always use 'root' drive
       const list = await drive.list(data.folderId)
-      return { files: list.files || [] }
+
+      const filesWithTokens = await Promise.all((list.files || []).map(async (f: any) => {
+        // Only generate token for actual files, not folders
+        if (f.mimeType !== 'application/vnd.google-apps.folder') {
+          const token = await createToken(f.id, env.SECRET_KEY)
+          // Pre-calculate the clean download URL
+          f.downloadUrl = `/api/download/${token}/${encodeURIComponent(f.name)}`
+        }
+        return f
+      }))
+
+      return { files: filesWithTokens }
     } catch (e: any) {
       console.error("Drive Error:", e)
       throw new Error(e.message || "Failed to fetch drive files")
@@ -111,15 +123,15 @@ function DriveView() {
                       {file.size ? formatBytes(file.size) : '--'}
                     </TableCell>
                     <TableCell className="text-right">
-                       {!isFolder && (
-                         <Button variant="outline" size="sm" onClick={() => {
-                             const link = `${window.location.origin}/api/stream?fileId=${file.id}`
-                             navigator.clipboard.writeText(link)
-                             alert("Direct Link Copied!")
-                         }}>
-                             <Download className="h-4 w-4 mr-1" /> Link
-                         </Button>
-                       )}
+                        {!isFolder && file.downloadUrl && (
+                        <Button variant="outline" size="sm" onClick={() => {
+                            const link = `${window.location.origin}${file.downloadUrl}`
+                            navigator.clipboard.writeText(link)
+                            alert("Direct Link Copied!")
+                        }}>
+                            <Download className="h-4 w-4 mr-1" /> Link
+                        </Button>
+                        )}
                     </TableCell>
                   </TableRow>
                 )

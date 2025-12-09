@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DriveFolderIdRouteImport } from './routes/drive.$folderId'
+import { Route as ApiDownloadTokenFilenameRouteImport } from './routes/api/download.$token.$filename'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,41 @@ const DriveFolderIdRoute = DriveFolderIdRouteImport.update({
   path: '/drive/$folderId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDownloadTokenFilenameRoute =
+  ApiDownloadTokenFilenameRouteImport.update({
+    id: '/api/download/$token/$filename',
+    path: '/api/download/$token/$filename',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/drive/$folderId': typeof DriveFolderIdRoute
+  '/api/download/$token/$filename': typeof ApiDownloadTokenFilenameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/drive/$folderId': typeof DriveFolderIdRoute
+  '/api/download/$token/$filename': typeof ApiDownloadTokenFilenameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/drive/$folderId': typeof DriveFolderIdRoute
+  '/api/download/$token/$filename': typeof ApiDownloadTokenFilenameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/drive/$folderId'
+  fullPaths: '/' | '/drive/$folderId' | '/api/download/$token/$filename'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/drive/$folderId'
-  id: '__root__' | '/' | '/drive/$folderId'
+  to: '/' | '/drive/$folderId' | '/api/download/$token/$filename'
+  id: '__root__' | '/' | '/drive/$folderId' | '/api/download/$token/$filename'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DriveFolderIdRoute: typeof DriveFolderIdRoute
+  ApiDownloadTokenFilenameRoute: typeof ApiDownloadTokenFilenameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +76,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DriveFolderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/download/$token/$filename': {
+      id: '/api/download/$token/$filename'
+      path: '/api/download/$token/$filename'
+      fullPath: '/api/download/$token/$filename'
+      preLoaderRoute: typeof ApiDownloadTokenFilenameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DriveFolderIdRoute: DriveFolderIdRoute,
+  ApiDownloadTokenFilenameRoute: ApiDownloadTokenFilenameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
