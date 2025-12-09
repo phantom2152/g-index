@@ -2,6 +2,10 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start' 
 import { getDriveClient } from '../lib/google-drive' 
 import { createToken } from '../lib/token'
+import { verifyAuthToken } from '../lib/auth'
+import { authenticate } from '../lib/server-functions'
+import { useState } from 'react'
+import { getCookie } from '@tanstack/react-start/server';
 import {
   Table,
   TableBody,
@@ -26,6 +30,22 @@ const getFiles = createServerFn({ method: 'GET' })
     }
 
     try {
+
+      
+      const authToken = getCookie('auth_token')
+
+      if (!authToken) {
+      throw new Error('UNAUTHENTICATED')
+      }
+
+      console.log("Untill iv");
+      const isValid = await verifyAuthToken(authToken)
+
+      if (!isValid) {
+      throw new Error('UNAUTHENTICATED')
+      }
+
+      
       const drive = await getDriveClient(env, 'root') // Always use 'root' drive
       const list = await drive.list(data.folderId)
 
@@ -50,7 +70,85 @@ const getFiles = createServerFn({ method: 'GET' })
 export const Route = createFileRoute('/drive/$folderId')({
   loader: ({ params }) => getFiles({ data: { folderId: params.folderId } }),
   component: DriveView,
+  errorComponent: AuthErrorBoundary,
 })
+
+function AuthErrorBoundary({ error }: { error: Error }) {
+  const [password, setPassword] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
+
+  // Check if this is an auth error
+  if (!error.message.includes('UNAUTHENTICATED')) {
+    // Not an auth error, show generic error
+    return (
+      <div className="container mx-auto p-6 max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-red-500">Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>{error.message}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setErrorMsg('')
+
+    try {
+      await authenticate({ data: { password } })
+      // Success! Cookie is set, reload the page
+      window.location.reload()
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Invalid password')
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="container mx-auto p-6 max-w-md mt-20">
+      <Card>
+        <CardHeader>
+          <CardTitle>🔒 Authentication Required</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium mb-2">
+                Enter Access Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="Password"
+                disabled={isLoading}
+                autoFocus
+              />
+            </div>
+
+            {errorMsg && (
+              <div className="text-red-500 text-sm">
+                {errorMsg}
+              </div>
+            )}
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Verifying...' : 'Access Drive'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
 
 // --- UI COMPONENT ---
 function DriveView() {
